@@ -1,0 +1,61 @@
+# ----------------------------
+# Python
+# ----------------------------
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Environment variables
+.env
+*.env
+
+# SQLite database
+*.db
+*.sqlite3
+
+# ChromaDB
+chroma_db/
+
+# Python cache
+.pytest_cache/
+.mypy_cache/
+
+# Logs
+*.log
+
+# ----------------------------
+# Node / React
+# ----------------------------
+node_modules/
+dist/
+build/
+
+# Vite
+.vite/
+
+# ----------------------------
+# VS Code
+# ----------------------------
+.vscode/
+
+# ----------------------------
+# OS Files
+# ----------------------------
+.DS_Store
+Thumbs.db
+
+# ----------------------------
+# IDE
+# ----------------------------
+.idea/
+
+# ----------------------------
+# Temporary files
+# ----------------------------
+*.tmp
+*.bak
+
+backend/knowledge/
