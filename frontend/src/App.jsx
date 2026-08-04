@@ -152,20 +152,24 @@ function App() {
       abortControllerRef.current = new AbortController();
 
       const response = await fetch(
-        "https://aipersonalassistant-production-e525.up.railway.app",
-        {
-          signal: abortControllerRef.current.signal,
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            chat_id: currentChatId,
-            message: prompt,
-            mode: searchMode,
-          }),
-        }
-      );
+  "https://aipersonalassistant-production-e525.up.railway.app/chat-stream",
+  {
+    signal: abortControllerRef.current.signal,
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      chat_id: currentChatId,
+      message: prompt,
+      mode: searchMode,
+    }),
+  }
+);
+
+if (!response.ok) {
+  throw new Error(await response.text());
+}
 
       if (searchMode === "documents") {
     setAssistantStatus("📄 Searching documents...");
