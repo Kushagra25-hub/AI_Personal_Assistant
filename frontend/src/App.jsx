@@ -152,7 +152,7 @@ function App() {
       abortControllerRef.current = new AbortController();
 
       const response = await fetch(
-        "http://127.0.0.1:8000/chat-stream",
+        "https://aipersonalassistant-production-e525.up.railway.app",
         {
           signal: abortControllerRef.current.signal,
           method: "POST",
