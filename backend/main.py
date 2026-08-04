@@ -20,16 +20,16 @@ from backend.database import (
     get_chat_by_id,
     get_messages,
 )
-# from backend.vector_store import (
-#     index_text,
-#     get_documents,
-#     delete_document,
-# )
-# from backend.ai import (
-#     chat_with_ai,
-#     stream_chat_with_ai,
-#     LAST_SOURCES,
-# )
+from backend.vector_store import (
+    index_text,
+    get_documents,
+    delete_document,
+)
+from backend.ai import (
+    chat_with_ai,
+    stream_chat_with_ai,
+    LAST_SOURCES,
+)
 
 app = FastAPI()
 
@@ -83,26 +83,26 @@ def new_chat():
     return create_chat()
 
 
-# @app.post("/chat")
-# def chat(request: ChatRequest):
+@app.post("/chat")
+def chat(request: ChatRequest):
 
-#     chat = get_chat_by_id(request.chat_id)
+    chat = get_chat_by_id(request.chat_id)
 
-#     if chat and chat["title"] == "New Chat":
-#         rename_chat(
-#             request.chat_id,
-#             auto_title(request.message)
-#         )
+    if chat and chat["title"] == "New Chat":
+        rename_chat(
+            request.chat_id,
+            auto_title(request.message)
+        )
 
-#     response = chat_with_ai(
-#         request.chat_id,
-#         request.message,
-#         request.mode,
-#     )
+    response = chat_with_ai(
+        request.chat_id,
+        request.message,
+        request.mode,
+    )
 
-#     return {
-#         "response": response
-#     }
+    return {
+        "response": response
+    }
 
 @app.delete("/chats/{chat_id}")
 def remove_chat(chat_id: int):
@@ -140,82 +140,82 @@ def stream_test():
         media_type="text/plain"
     )
 
-# @app.post("/chat-stream")
-# def chat_stream(request: ChatRequest):
+@app.post("/chat-stream")
+def chat_stream(request: ChatRequest):
 
-#     chat = get_chat_by_id(request.chat_id)
+    chat = get_chat_by_id(request.chat_id)
 
-#     if chat and chat["title"] == "New Chat":
-#         rename_chat(
-#             request.chat_id,
-#             auto_title(request.message)
-#         )
+    if chat and chat["title"] == "New Chat":
+        rename_chat(
+            request.chat_id,
+            auto_title(request.message)
+        )
 
-#     return StreamingResponse(
-#         stream_chat_with_ai(
-#             request.chat_id,
-#             request.message,
-#             request.mode,
-#         ),
-#         media_type="text/plain"
-#     )
+    return StreamingResponse(
+        stream_chat_with_ai(
+            request.chat_id,
+            request.message,
+            request.mode,
+        ),
+        media_type="text/plain"
+    )
 
 from fastapi import HTTPException
 
 
-# @app.post("/upload-document")
-# def upload_document(file: UploadFile = File(...)):
-#     try:
-#         text = extract_text(file)
+@app.post("/upload-document")
+def upload_document(file: UploadFile = File(...)):
+    try:
+        text = extract_text(file)
 
-#         if not text.strip():
-#             raise HTTPException(
-#                 status_code=400,
-#                 detail="No readable text found in the document."
-#             )
+        if not text.strip():
+            raise HTTPException(
+                status_code=400,
+                detail="No readable text found in the document."
+            )
 
-#         chunks = index_text(
-#             text,
-#             file.filename
-#         )
+        chunks = index_text(
+            text,
+            file.filename
+        )
 
-#         return {
-#             "message": "Document indexed successfully.",
-#             "filename": file.filename,
-#             "chunks": chunks
-#         }
+        return {
+            "message": "Document indexed successfully.",
+            "filename": file.filename,
+            "chunks": chunks
+        }
 
-#     except ValueError as e:
-#         raise HTTPException(
-#             status_code=400,
-#             detail=str(e)
-#         )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=400,
+            detail=str(e)
+        )
 
-#     except Exception as e:
-#         raise HTTPException(
-#             status_code=500,
-#             detail=f"Failed to process document: {e}"
-#         )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to process document: {e}"
+        )
 
 @app.get("/documents")
 def documents():
 
     return get_documents()
 
-# @app.delete("/documents/{filename}")
-# def remove_document(filename: str):
+@app.delete("/documents/{filename}")
+def remove_document(filename: str):
 
-#     deleted = delete_document(filename)
+    deleted = delete_document(filename)
 
-#     return {
-#         "message": "Document deleted successfully.",
-#         "deleted_chunks": deleted,
-#     }
+    return {
+        "message": "Document deleted successfully.",
+        "deleted_chunks": deleted,
+    }
 
 @app.get("/web-search")
 def web_search(q: str):
     return search_web(q)
 
-# @app.get("/chat-sources/{chat_id}")
-# def get_chat_sources(chat_id: int):
-#     return LAST_SOURCES.get(chat_id, [])
+@app.get("/chat-sources/{chat_id}")
+def get_chat_sources(chat_id: int):
+    return LAST_SOURCES.get(chat_id, [])
