@@ -6,7 +6,10 @@ from backend.rag import (
     split_into_chunks,
 )
 
-model = SentenceTransformer("all-MiniLM-L6-v2")
+try:
+    model = SentenceTransformer("all-MiniLM-L6-v2", local_files_only=True)
+except Exception:
+    model = SentenceTransformer("all-MiniLM-L6-v2")
 
 client = chromadb.PersistentClient(path="chroma_db")
 

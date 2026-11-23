@@ -14,13 +14,16 @@ export function useChat() {
     try {
       const data = await getChats();
 
-      setChats(data);
-
-      if (data.length > 0) {
+      if (data && data.length > 0) {
+        setChats(data);
         setCurrentChatId(data[0].id);
+      } else {
+        const newChat = await createChat();
+        setChats([newChat]);
+        setCurrentChatId(newChat.id);
       }
     } catch (err) {
-      console.error(err);
+      console.error("Failed to load chats:", err);
     }
   }
 
@@ -30,8 +33,10 @@ export function useChat() {
 
       setChats((prev) => [...prev, newChat]);
       setCurrentChatId(newChat.id);
+      return newChat;
     } catch (err) {
-      console.error(err);
+      console.error("Failed to create new chat:", err);
+      return null;
     }
   }
 
@@ -43,17 +48,18 @@ export function useChat() {
         (chat) => chat.id !== chatId
       );
 
-      setChats(updatedChats);
-
-      if (currentChatId === chatId) {
-        if (updatedChats.length > 0) {
+      if (updatedChats.length > 0) {
+        setChats(updatedChats);
+        if (currentChatId === chatId) {
           setCurrentChatId(updatedChats[0].id);
-        } else {
-          setCurrentChatId(null);
         }
+      } else {
+        const newChat = await createChat();
+        setChats([newChat]);
+        setCurrentChatId(newChat.id);
       }
     } catch (err) {
-      console.error(err);
+      console.error("Failed to delete chat:", err);
     }
   }
 

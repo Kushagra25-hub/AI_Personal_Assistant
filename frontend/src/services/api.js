@@ -1,4 +1,5 @@
-const API_URL = "https://aipersonalassistant-production-e525.up.railway.app";
+export const API_URL =
+  import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
 
 export async function getChats() {
   const response = await fetch(`${API_URL}/chats`);

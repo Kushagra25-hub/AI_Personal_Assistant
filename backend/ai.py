@@ -2,14 +2,14 @@ from groq import Groq
 
 from backend.services.web_search import search_web
 from backend.vector_store import search_documents
-from backend.config import GROQ_API_KEY
+from backend.config import GROQ_API_KEY, GROQ_MODEL
 from backend.chat_memory import SYSTEM_PROMPT
 from backend.database import (
     save_message,
     get_messages,
 )
 
-LAST_SOURCES={}
+LAST_SOURCES = {}
 
 client = Groq(api_key=GROQ_API_KEY)
 
@@ -21,13 +21,13 @@ def choose_mode(message: str) -> str:
     - web
     - both
     """
-
-    completion = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
-        messages=[
-            {
-                "role": "system",
-                "content": """
+    try:
+        completion = client.chat.completions.create(
+            model=GROQ_MODEL,
+            messages=[
+                {
+                    "role": "system",
+                    "content": """
 You are a routing assistant.
 
 Reply with ONLY one word:
@@ -42,23 +42,25 @@ Rules:
 
 Never explain your answer.
 """,
-            },
-            {
-                "role": "user",
-                "content": message,
-            },
-        ],
-        temperature=0,
-    )
+                },
+                {
+                    "role": "user",
+                    "content": message,
+                },
+            ],
+            temperature=0,
+        )
 
-    mode = completion.choices[0].message.content.strip().lower()
+        mode = completion.choices[0].message.content.strip().lower()
 
-    if mode not in ["documents", "web", "both"]:
-        mode = "documents"
+        if mode not in ["documents", "web", "both"]:
+            mode = "documents"
 
-    print("Chosen mode:", mode)
-
-    return mode
+        print("Chosen mode:", mode)
+        return mode
+    except Exception as e:
+        print("Routing Error (defaulting to documents):", e)
+        return "documents"
 
 
 def build_rag_context(message: str, mode: str = "documents"):
@@ -67,40 +69,46 @@ def build_rag_context(message: str, mode: str = "documents"):
 
     # ---------- Documents ----------
     if mode in ["documents", "both"]:
-        results = search_documents(message)
+        try:
+            results = search_documents(message)
 
-        documents = results["documents"]
-        metadatas = results["metadatas"]
+            documents = results.get("documents", [])
+            metadatas = results.get("metadatas", [])
 
-        for document, metadata in zip(documents, metadatas):
-            context += f"Source: {metadata['source']}\n"
-            context += document
-            context += "\n\n"
+            for document, metadata in zip(documents, metadatas):
+                context += f"Source: {metadata['source']}\n"
+                context += document
+                context += "\n\n"
 
-        for metadata in metadatas:
-            sources.append(
-                {
-                    "type": "document",
-                    "source": metadata["source"],
-                }
-            )
+            for metadata in metadatas:
+                sources.append(
+                    {
+                        "type": "document",
+                        "source": metadata["source"],
+                    }
+                )
+        except Exception as e:
+            print("Document search error:", e)
 
     # ---------- Web ----------
     if mode in ["web", "both"]:
-        web = search_web(message)
+        try:
+            web = search_web(message)
 
-        for item in web["results"]:
-            context += f"Web Source: {item['url']}\n"
-            context += item["content"]
-            context += "\n\n"
+            for item in web.get("results", []):
+                context += f"Web Source: {item['url']}\n"
+                context += item.get("content", "")
+                context += "\n\n"
 
-            sources.append(
-                {
-                    "type": "web",
-                    "title": item.get("title", ""),
-                    "url": item["url"],
-                }
-            )
+                sources.append(
+                    {
+                        "type": "web",
+                        "title": item.get("title", ""),
+                        "url": item["url"],
+                    }
+                )
+        except Exception as e:
+            print("Web search error:", e)
 
     return {
         "context": context,
@@ -133,16 +141,17 @@ def build_conversation(
     context = rag["context"]
     sources = rag["sources"]
 
-    conversation.append(
-        {
-            "role": "system",
-            "content": (
-                "Use the following information to answer the user's question. "
-                "If the information is relevant, base your answer on it.\n\n"
-                f"{context}"
-            ),
-        }
-    )
+    if context.strip():
+        conversation.append(
+            {
+                "role": "system",
+                "content": (
+                    "Use the following information to answer the user's question. "
+                    "If the information is relevant, base your answer on it.\n\n"
+                    f"{context}"
+                ),
+            }
+        )
 
     # Add the current user message
     conversation.append(
@@ -172,16 +181,9 @@ def chat_with_ai(
         mode,
     )
 
-    print("\n========== FINAL PROMPT ==========")
-
-    for msg in conversation:
-        print(msg["role"].upper())
-        print(msg["content"])
-        print("-" * 40)
-
     try:
         completion = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model=GROQ_MODEL,
             messages=conversation,
         )
 
@@ -214,38 +216,48 @@ def stream_chat_with_ai(
 
     save_message(chat_id, "user", message)
 
-    conversation, sources = build_conversation(
-        chat_id,
-        message,
-        mode,
-    )
+    try:
+        conversation, sources = build_conversation(
+            chat_id,
+            message,
+            mode,
+        )
+    except Exception as e:
+        print("Error building conversation:", e)
+        error_msg = f"Error preparing context: {e}"
+        yield error_msg
+        save_message(chat_id, "assistant", error_msg)
+        LAST_SOURCES[chat_id] = []
+        return
 
-    print("\n========== FINAL PROMPT ==========")
+    try:
+        completion = client.chat.completions.create(
+            model=GROQ_MODEL,
+            messages=conversation,
+            stream=True,
+        )
 
-    for msg in conversation:
-        print(msg["role"].upper())
-        print(msg["content"])
-        print("-" * 40)
+        full_response = ""
 
-    completion = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
-        messages=conversation,
-        stream=True,
-    )
+        for chunk in completion:
+            delta = chunk.choices[0].delta.content
 
-    full_response = ""
+            if delta:
+                full_response += delta
+                yield delta
 
-    for chunk in completion:
-        delta = chunk.choices[0].delta.content
+        save_message(
+            chat_id,
+            "assistant",
+            full_response,
+        )
 
-        if delta:
-            full_response += delta
-            yield delta
+        LAST_SOURCES[chat_id] = sources
 
-    save_message(
-        chat_id,
-        "assistant",
-        full_response,
-    )
+    except Exception as e:
+        print("Groq Streaming Error:", repr(e))
+        error_msg = f"Sorry, an error occurred while generating the response: {e}"
+        yield error_msg
+        save_message(chat_id, "assistant", error_msg)
+        LAST_SOURCES[chat_id] = []
 
-    LAST_SOURCES[chat_id] = sources

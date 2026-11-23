@@ -25,6 +25,7 @@ chroma_db/
 
 # Logs
 *.log
+run_err.txt
 
 # ----------------------------
 # Node / React
