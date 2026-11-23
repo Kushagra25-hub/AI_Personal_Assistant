@@ -15,19 +15,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Install PyTorch CPU-only first for smaller image footprint (~200MB vs ~2GB)
-RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
-
-# Copy and install python dependencies
+# Copy and install python dependencies with PyTorch CPU index
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --extra-index-url https://download.pytorch.org/whl/cpu -r requirements.txt
 
 # Pre-download SentenceTransformer model during build to ensure fast cold-starts
 RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')"
 
 # Copy application files
 COPY backend/ ./backend/
-COPY knowledge/ ./knowledge/ 2>/dev/null || true
+
+# Ensure runtime directories exist
+RUN mkdir -p /app/backend/knowledge /app/chroma_db
 
 # Expose port (Render/Railway/Cloud will override PORT dynamically)
 EXPOSE 8000
